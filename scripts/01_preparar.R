@@ -177,9 +177,158 @@ sum(is.na(odepa$`Precio promedio`))
 #' Se revisan específicamente las variables transformadas,
 #' ya que son las que podrían presentar problemas de conversión.
 
-
 #' Revisar las dimensiones de la base
 dim(odepa)
 #' Se revisan las dimensiones para comprobar que la transformación no 
 #' haya modificado la cantidad de registros.
+
+
+##' 9. Aplicar criterios de limpieza
+
+#' Crear una copia para realizar la limpieza
+odepa_limpio <- odepa
+
+#' Revisar la cantidad inicial de registros
+nrow(odepa_limpio)
+#' Los registros son 163400 como la base original.
+
+#' Eliminar registros que no tengan información necesaria y observaciones 
+#'con valores no validos
+#'Se consideran las variables de fecha, producto, unidad de comercialización,
+#' volumen y precios.
+#' También se comprueba que los valores sean positivos y que los precios
+#' mantengan el orden esperado: mínimo, promedio y máximo.
+odepa_limpio <- odepa_limpio |>
+  filter(
+    !is.na(Fecha),
+    !is.na(Producto),
+    !is.na(`Unidad de comercializacion`),
+    !is.na(Volumen),
+    !is.na(`Precio minimo`),
+    !is.na(`Precio maximo`),
+    !is.na(`Precio promedio`),
+    Volumen > 0,
+    `Precio minimo` > 0,
+    `Precio maximo` > 0,
+    `Precio promedio` > 0,
+    `Precio minimo` <= `Precio promedio`,
+    `Precio promedio` <= `Precio maximo`)
+
+#' Se conservan las observaciones que tienen información necesaria y 
+#' valores positivos y consistentes.
+
+#' Revisar la cantidad de registros después de la limpieza
+nrow(odepa_limpio)
+#' Se mantienen los 163400 registros iniciales.
+
+#' Comparar los registros antes y después de la limpieza
+nrow(odepa) - nrow(odepa_limpio)
+#' El resultado es 0, por lo tanto, no fue necesario eliminar registros.
+#' Esto indica que todas las observaciones cumplen con los criterios
+#' establecidos para esta etapa.
+
+#' Se revisan los valores faltantes por variable para comprobar
+#' que la base continúe sin información incompleta.
+colSums(is.na(odepa_limpio))
+#' La revisión muestra 0 valores faltantes en todas las variables.
+#' Por lo tanto, la base no presenta problemas de datos ausentes
+#' en las variables revisadas.
+
+
+##' 10. Identificar posibles valores atípicos
+
+#' Agrupar por producto y unidad de comercialización
+#' para comparar observaciones con características similares
+odepa_limpio <- odepa_limpio |>
+  group_by(Producto, `Unidad de comercializacion`) |>
+  mutate(
+    cantidad_grupo = n(),
+    q1_precio = quantile(`Precio promedio`, 0.25, na.rm = TRUE), # calcular cuartiles y rango intercuartílico del precio
+    q3_precio = quantile(`Precio promedio`, 0.75, na.rm = TRUE),
+    rango_precio = IQR(`Precio promedio`, na.rm = TRUE),
+    q1_volumen = quantile(Volumen, 0.25, na.rm = TRUE), # calcular cuartiles y rango intercuartílico del volumen
+    q3_volumen = quantile(Volumen, 0.75, na.rm = TRUE),
+    rango_volumen = IQR(Volumen, na.rm = TRUE),
+    outlier_precio = cantidad_grupo >= 4 & # identificar posibles valores atípicos en el precio
+      (`Precio promedio` < q1_precio - 1.5 * rango_precio |
+          `Precio promedio` > q3_precio + 1.5 * rango_precio),
+    outlier_volumen = cantidad_grupo >= 4 & # se aplica el mismo procedimiento para identificar
+      (Volumen < q1_volumen - 1.5 * rango_volumen |  # posibles valores atípicos en el volumen comercializado.
+          Volumen > q3_volumen + 1.5 * rango_volumen)) |>
+  ungroup()
+
+#' Aunque la base no presenta registros que deban eliminarse
+#' según los criterios anteriores, es necesario revisar si existen
+#' valores que se alejen considerablemente del comportamiento general.
+#'
+#' Los precios y volúmenes pueden variar según el producto
+#' y la unidad de comercialización. Por esta razón, se agrupan
+#' las observaciones según estas características para realizar
+#' comparaciones entre registros similares.
+#' 
+#' Se utiliza el rango intercuartílico para identificar posibles
+#' valores atípicos. Se consideran como tales las observaciones
+#' que se encuentran por debajo de Q1 - 1,5 veces el rango
+#' intercuartílico o por encima de Q3 + 1,5 veces dicho rango.
+#'
+#' Para realizar esta identificación se consideran grupos
+#' que tengan al menos cuatro observaciones.
+
+
+##' 11. Revisar los valores atípicos identificados
+
+#' Contar posibles valores atípicos en precios
+sum(odepa_limpio$outlier_precio, na.rm = TRUE)
+#' Se identificaron 3.080 observaciones con posibles valores atípicos
+#' en el precio promedio.
+
+#' Contar posibles valores atípicos en volumen
+sum(odepa_limpio$outlier_volumen, na.rm = TRUE)
+#' Se identificaron 7.911 observaciones con posibles valores atípicos
+#' en el volumen comercializado.
+
+#' Observar algunos registros identificados
+head(filter(
+    odepa_limpio,
+    outlier_precio | outlier_volumen))
+#' La revisión de los primeros registros permite observar que los 
+#' valores identificados corresponden a distintos productos, regiones y
+#' mercados.
+#' Esta identificación no significa necesariamente que sean errores,
+#' ya que pueden representar diferencias reales en las condiciones
+#' de comercialización.
+
+#' Revisar las dimensiones de la base después de la limpieza
+dim(odepa_limpio)
+#' La base contiene 163.400 registros y 24 variables.
+#' El aumento de variables se debe a los cálculos utilizados
+#' para identificar los posibles valores atípicos.
+
+#' Revisar nuevamente los valores faltantes
+colSums(is.na(odepa_limpio))
+#' La revisión muestra que las variables incorporadas
+#' tampoco presentan valores faltantes.
+
+#' Revisar las estadísticas de las variables principales
+summary(odepa_limpio$Volumen)
+#' El volumen presenta un mínimo de 1 y un máximo de 248.000.
+#' La mediana es de 220 y el promedio es de 954,8.
+#' La diferencia entre la mediana y el promedio muestra que existen
+#' observaciones con volúmenes considerablemente mayores
+#' que la mayoría de los registros.
+
+summary(odepa_limpio$`Precio promedio`)
+#' El precio promedio presenta un mínimo de 55,5 y un máximo de 990.000.
+#' La mediana es de 12.000 y el promedio es de 27.206,2.
+#' La diferencia entre ambos valores indica que existen observaciones
+#' con precios elevados respecto de la distribución general.
+
+#' Revisar la cantidad de observaciones identificadas
+table(odepa_limpio$outlier_precio)
+#' De las 163.400 observaciones, 3.080 fueron identificadas
+#' como posibles valores atípicos en el precio y 160.320 no fueron marcadas.
+
+table(odepa_limpio$outlier_volumen)
+#' En el volumen, 7.911 observaciones fueron identificadas
+#' como posibles valores atípicos y 155.489 no fueron marcadas.
 
