@@ -374,20 +374,48 @@ odepa_limpio <- odepa_limpio |>
 #' Se revisa la estructura definitiva de la base
 #' para comprobar que las variables tengan los tipos de datos esperados.
 str(odepa_limpio)
+#' La base final contiene 163.400 registros y 17 variables.
+#' La fecha se encuentra en formato Date, el volumen y los precios
+#' son variables numéricas, y las variables de identificación y 
+#' clasificación se mantienen como texto.
+#' Los indicadores de valores atípicos se conservan como variables lógicas.
 
 #' Se comprueba la cantidad final de registros y variables.
 dim(odepa_limpio)
+#' El resultado confirma que la base contiene 163.400 filas y 
+#' 17 columnas después del proceso de preparación.
 
 #' Se revisan los nombres definitivos de las variables.
 names(odepa_limpio)
+#' Se confirma que los nombres fueron modificados.
+#' La base conserva las variables originales necesarias para el análisis
+#' y agrega los indicadores de posibles valores atípicos.
 
 #' Se obtiene un resumen de la base después del proceso de preparación.
 summary(odepa_limpio)
+#' Los datos abarcan desde el 2 de enero hasta el 13 de noviembre de 2026.
+#' El volumen comercializado presenta una mediana de 220 unidades
+#' y un promedio de 954,8, lo que muestra diferencias importantes
+#' entre las cantidades comercializadas.
+#' El precio promedio presenta una mediana de $12.000
+#' y una media de $27.206,2. El valor máximo alcanza $990.000,
+#' por lo que existen observaciones con precios considerablemente mayores
+#' que los valores centrales de la distribución.
+#' Estas diferencias justifican mantener los indicadores de posibles
+#' valores atípicos para revisarlos durante el análisis.
 
 #' Se comprueba que los indicadores de posibles valores atípicos
 #' se hayan conservado correctamente.
 table(odepa_limpio$outlier_precio)
+#' Se identificaron 3.080 observaciones con posibles valores atípicos
+#' en el precio promedio y 160.320 sin esta condición.
+
 table(odepa_limpio$outlier_volumen)
+#' Se identificaron 7.911 observaciones con posibles valores atípicos
+#' en el volumen y 155.489 sin esta condición.
+#' Estos registros se mantienen porque las diferencias entre productos,
+#' unidades de comercialización y mercados pueden generar valores extremos
+#' que no necesariamente corresponden a errores.
 
 
 ##' 15. Exportar la base limpia
@@ -410,10 +438,14 @@ haven::write_dta(odepa_limpio, "data/processed/odepa_limpio.dta", version = 14)
 #' Se revisa el contenido de la carpeta processed
 #' para comprobar que los archivos se hayan guardado.
 list.files("data/processed")
+#' Se confirma que se generaron los archivos odepa_limpio.csv
+#' y odepa_limpio.dta dentro de la carpeta de datos procesados.
 
 #' Se comprueba la existencia de los dos archivos exportados.
 file.exists("data/processed/odepa_limpio.csv")
 file.exists("data/processed/odepa_limpio.dta")
+#' Ambos resultados TRUE confirman que los archivos se encuentran
+#' guardados en las rutas indicadas.
 
 #' Se vuelven a importar los archivos para comprobar
 #' que puedan leerse correctamente después de su exportación.
@@ -428,9 +460,15 @@ revision_dta <- haven::read_dta("data/processed/odepa_limpio.dta")
 dim(odepa_limpio)
 dim(revision_csv)
 dim(revision_dta)
+#' Las tres bases presentan las mismas dimensiones:
+#' 163.400 registros y 17 variables.
+#' Esto confirma que ambos archivos se pueden volver a importar
+#' y que mantienen la misma cantidad de filas y columnas que la base final.
 
 #' Se muestra un mensaje para indicar que el proceso
 #' de preparación y exportación ha finalizado.
 cat("Proceso de preparación y exportación finalizado.\n")
-
+#' El proceso de preparación y exportación terminó correctamente.
+#' La base procesada queda disponible en formato csv para su revisión
+#' y en formato DTA para continuar el análisis en Stata.
 
