@@ -332,3 +332,105 @@ table(odepa_limpio$outlier_volumen)
 #' En el volumen, 7.911 observaciones fueron identificadas
 #' como posibles valores atípicos y 155.489 no fueron marcadas.
 
+
+##' 12. Preparar los nombres de las variables
+
+#' Se cambian los nombres de algunas variables para facilitar
+#' su identificación y utilización en los análisis posteriores.
+#' Se reemplazan espacios y caracteres especiales por nombres
+#' más simples y compatibles con el trabajo en Stata.
+odepa_limpio <- odepa_limpio |>
+  rename(
+    id = `_id`,
+    id_region = `ID region`,
+    variedad_tipo = `Variedad / Tipo`,
+    unidad_comercializacion = `Unidad de comercializacion`,
+    precio_minimo = `Precio minimo`,
+    precio_maximo = `Precio maximo`,
+    precio_promedio = `Precio promedio`)
+
+
+##' 13. Eliminar variables auxiliares
+
+#' Durante la identificación de valores atípicos se crearon
+#' variables auxiliares para calcular cuartiles y rangos intercuartílicos.
+#' Como estos cálculos ya fueron realizados, se eliminan dichas columnas
+#' para dejar una base más ordenada.
+#' Se mantienen los indicadores outlier_precio y outlier_volumen
+#' porque permiten reconocer las observaciones identificadas.
+odepa_limpio <- odepa_limpio |>
+  select(
+    -cantidad_grupo,
+    -q1_precio,
+    -q3_precio,
+    -rango_precio,
+    -q1_volumen,
+    -q3_volumen,
+    -rango_volumen)
+
+
+##' 14. Revisar la base final
+
+#' Se revisa la estructura definitiva de la base
+#' para comprobar que las variables tengan los tipos de datos esperados.
+str(odepa_limpio)
+
+#' Se comprueba la cantidad final de registros y variables.
+dim(odepa_limpio)
+
+#' Se revisan los nombres definitivos de las variables.
+names(odepa_limpio)
+
+#' Se obtiene un resumen de la base después del proceso de preparación.
+summary(odepa_limpio)
+
+#' Se comprueba que los indicadores de posibles valores atípicos
+#' se hayan conservado correctamente.
+table(odepa_limpio$outlier_precio)
+table(odepa_limpio$outlier_volumen)
+
+
+##' 15. Exportar la base limpia
+
+#' Se guarda la base preparada en formato CSV.
+#' Este archivo permite utilizar los datos procesados
+#' en otros programas o herramientas de análisis.
+write.csv(odepa_limpio, "data/processed/odepa_limpio.csv", row.names = FALSE, na = "")
+
+#' También se exporta la base en formato DTA.
+#' Este formato permite abrir directamente los datos en Stata,
+#' facilitando la continuidad del análisis en ese programa.
+#' Se utiliza la versión 14 para mantener compatibilidad
+#' con versiones de Stata que admiten este formato.
+haven::write_dta(odepa_limpio, "data/processed/odepa_limpio.dta", version = 14)
+
+
+##' 16. Verificar los archivos exportados
+
+#' Se revisa el contenido de la carpeta processed
+#' para comprobar que los archivos se hayan guardado.
+list.files("data/processed")
+
+#' Se comprueba la existencia de los dos archivos exportados.
+file.exists("data/processed/odepa_limpio.csv")
+file.exists("data/processed/odepa_limpio.dta")
+
+#' Se vuelven a importar los archivos para comprobar
+#' que puedan leerse correctamente después de su exportación.
+revision_csv <- read.csv("data/processed/odepa_limpio.csv",
+  stringsAsFactors = FALSE)
+
+revision_dta <- haven::read_dta("data/processed/odepa_limpio.dta")
+
+#' Se comparan las dimensiones de los archivos exportados
+#' con la base final para comprobar que se hayan conservado
+#' los registros y las variables.
+dim(odepa_limpio)
+dim(revision_csv)
+dim(revision_dta)
+
+#' Se muestra un mensaje para indicar que el proceso
+#' de preparación y exportación ha finalizado.
+cat("Proceso de preparación y exportación finalizado.\n")
+
+
